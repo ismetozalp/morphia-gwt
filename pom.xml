@@ -3,7 +3,8 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>org.mongodb.morphia</groupId>
 	<artifactId>morphia-gwt</artifactId>
-	<version>0.107.1</version>
+	<version>0.107.2</version>
+	<packaging>jar</packaging>
 
 	<properties>
 		<morphia.version>0.107</morphia.version>
