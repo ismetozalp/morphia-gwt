@@ -3,15 +3,45 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>org.mongodb.morphia</groupId>
 	<artifactId>morphia-gwt</artifactId>
-	<version>0.107.2</version>
+	<version>0.107.2-SNAPSHOT</version>
 	<packaging>jar</packaging>
+	<name>morphia-gwt</name>
+	<description>Morphia GWT Extension</description>
+	<url>http://github.com/ismetozalp/morphia-gwt</url>
+
+	<licenses>
+		<license>
+			<name>The Apache Software License, Version 2.0</name>
+			<url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+			<distribution>repo</distribution>
+		</license>
+	</licenses>
+
+	<scm>
+		<connection>scm:git:git://github.com/ismetozalp/morphia-gwt.git</connection>
+		<developerConnection>scm:git:git@github.com:ismetozalp/morphia-gwt.git</developerConnection>
+		<url>http://github.com/ismetozalp/morphia-gwt</url>
+	</scm>
+
+	<developers>
+		<developer>
+			<id>ismet</id>
+			<name>Ismet Ozalp</name>
+			<email>ismetozalp@gmail.com</email>
+		</developer>
+		<developer>
+			<id>ozgur</id>
+			<name>Ozgur Aydinli</name>
+			<email>ozguraydinli@gmail.com</email>
+		</developer>
+	</developers>
 
 	<properties>
 		<morphia.version>0.107</morphia.version>
 		<mongo-java-driver.version>2.11.4</mongo-java-driver.version>
 		<gwt.version>2.5.1</gwt.version>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 	</properties>
-
 
 	<dependencies>
 		<dependency>
@@ -34,6 +64,19 @@
 
 	</dependencies>
 
+	<distributionManagement>
+		<snapshotRepository>
+			<id>sonatype-nexus-snapshots</id>
+			<name>Sonatype Nexus snapshot repository</name>
+			<url>https://oss.sonatype.org/content/repositories/snapshots</url>
+		</snapshotRepository>
+		<repository>
+			<id>sonatype-nexus-staging</id>
+			<name>Sonatype Nexus release repository</name>
+			<url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+		</repository>
+	</distributionManagement>
+
 	<build>
 		<resources>
 			<resource>
@@ -49,6 +92,50 @@
 				</includes>
 			</resource>
 		</resources>
+
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-release-plugin</artifactId>
+				<version>2.2.2</version>
+				<configuration>
+					<arguments>-Dgpg.passphrase=${gpg.passphrase}</arguments>
+				</configuration>
+			</plugin>
+		</plugins>
 	</build>
+
+	<profiles>
+		<profile>
+			<id>release-sign-artifacts</id>
+			<activation>
+				<property>
+					<name>performRelease</name>
+					<value>true</value>
+				</property>
+			</activation>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-gpg-plugin</artifactId>
+						<version>1.4</version>
+						<configuration>
+							<passphrase>${gpg.passphrase}</passphrase>
+						</configuration>
+						<executions>
+							<execution>
+								<id>sign-artifacts</id>
+								<phase>verify</phase>
+								<goals>
+									<goal>sign</goal>
+								</goals>
+							</execution>
+						</executions>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+	</profiles>
 	
 </project>
