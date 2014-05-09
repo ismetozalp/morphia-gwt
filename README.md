@@ -1,6 +1,6 @@
 # morphia-gwt
 
-Gwt extension for morphia
+Gwt extension for [morphia](https://github.com/mongodb/morphia)
 
 ### Usage
 add the dependency to your pom.xml
@@ -8,7 +8,7 @@ add the dependency to your pom.xml
 <dependency>
   <groupId>org.mongodb.morphia</groupId>
   <artifactId>morphia-gwt</artifactId>
-	<version>0.107.2</version>
+  <version>0.107.2</version>
 </dependency>
 ```
 
