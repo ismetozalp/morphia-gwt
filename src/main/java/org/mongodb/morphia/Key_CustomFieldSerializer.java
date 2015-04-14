@@ -15,9 +15,11 @@ public class Key_CustomFieldSerializer {
 
   public static Key instantiate(SerializationStreamReader streamReader)
       throws SerializationException {
-    Key newKey = new Key();
-    newKey.id = (Serializable) streamReader.readObject();
-    newKey.kind = streamReader.readString();
+
+    Serializable id = (Serializable) streamReader.readObject();
+    String kind = streamReader.readString();
+
+    Key newKey = new Key(kind, id);
     // newKey.kindClass = (Class) streamReader.readObject();
     return newKey;
   }
