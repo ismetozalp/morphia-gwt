@@ -1,82 +1,86 @@
+/*
+ * Copyright (c) 2008-2014 MongoDB, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.bson.types;
 
 import java.io.Serializable;
 import java.util.Date;
 import java.util.Random;
 
-public class ObjectId implements Serializable {
-  private static final long serialVersionUID = 837806216L;
-  private static final Random rnd = new Random();
+/**
+ * <p>
+ * GWT emulation for ObjectId
+ * </p>
+ * 
+ */
+public final class ObjectId implements Comparable<ObjectId>, Serializable {
 
-  /** Create a new object id. */
-  public ObjectId() {
-    this(new Date());
+  private static final long serialVersionUID = 5236933213306370432L;
+
+  private static final int LOW_ORDER_THREE_BYTES = 0x00ffffff;
+
+  private static final int MACHINE_IDENTIFIER;
+  private static final short PROCESS_IDENTIFIER;
+
+  private static final Random RANDOM = new Random();
+
+  private final int timestamp;
+  private final int machineIdentifier;
+  private final short processIdentifier;
+  private final int counter;
+
+  /**
+   * Gets a new object id.
+   *
+   * @return the new id
+   */
+  public static ObjectId get() {
+    return new ObjectId();
   }
 
-  public ObjectId(String s) {
-    if (!isValid(s))
-      throw new IllegalArgumentException("invalid ObjectId [" + s + "]");
-
-    byte b[] = new byte[12];
-    for (int i = 0; i < b.length; i++) {
-      b[i] = (byte) Integer.parseInt(s.substring(i * 2, i * 2 + 2), 16);
+  /**
+   * Checks if a string could be an {@code ObjectId}.
+   *
+   * @param hexString
+   *          a potential ObjectId as a String.
+   * @return whether the string could be an object id
+   * @throws IllegalArgumentException
+   *           if hexString is null
+   */
+  public static boolean isValid(final String hexString) {
+    if (hexString == null) {
+      throw new IllegalArgumentException();
     }
 
-    _time = readInt(b, 0);
-    _machine = readInt(b, 4);
-    _inc = readInt(b, 8);
-
-  }
-
-  public ObjectId(Date time) {
-    this(time, rnd.nextInt());
-  }
-
-  public ObjectId(Date time, int inc) {
-    // TODO: get machine id somehow
-    this(time, rnd.nextInt(), inc);
-  }
-
-  public ObjectId(Date time, int machine, int inc) {
-    _time = _flip((int) (time.getTime() / 1000));
-    _machine = machine;
-    _inc = inc;
-  }
-
-  /**
-   * Added this to simplify the serialization
-   * 
-   * @param time
-   * @param machine
-   * @param inc
-   */
-  ObjectId(int time, int machine, int inc) {
-    _time = time;
-    _machine = machine;
-    _inc = inc;
-  }
-
-  /**
-   * Checks if a string could be an <code>ObjectId</code>.
-   * 
-   * @return whether the string could be an object id
-   */
-  public static boolean isValid(String s) {
-    if (s == null)
+    int len = hexString.length();
+    if (len != 24) {
       return false;
-
-    final int len = s.length();
-    if (len != 24)
-      return false;
+    }
 
     for (int i = 0; i < len; i++) {
-      char c = s.charAt(i);
-      if (c >= '0' && c <= '9')
+      char c = hexString.charAt(i);
+      if (c >= '0' && c <= '9') {
         continue;
-      if (c >= 'a' && c <= 'f')
+      }
+      if (c >= 'a' && c <= 'f') {
         continue;
-      if (c >= 'A' && c <= 'F')
+      }
+      if (c >= 'A' && c <= 'F') {
         continue;
+      }
 
       return false;
     }
@@ -84,24 +88,355 @@ public class ObjectId implements Serializable {
     return true;
   }
 
-  public int hashCode() {
-    int x = _time;
-    x += (_machine * 111);
-    x += (_inc * 17);
-    return x;
+  /**
+   * Gets the generated machine identifier.
+   *
+   * @return an int representing the machine identifier
+   */
+  public static int getGeneratedMachineIdentifier() {
+    return MACHINE_IDENTIFIER;
   }
 
-  public boolean equals(Object o) {
-    if (this == o)
+  /**
+   * Gets the generated process identifier.
+   *
+   * @return the process id
+   */
+  public static int getGeneratedProcessIdentifier() {
+    return PROCESS_IDENTIFIER;
+  }
+
+  /**
+   * Gets the current value of the auto-incrementing counter.
+   *
+   * @return the current counter value.
+   */
+  // public static int getCurrentCounter() {
+  // return NEXT_COUNTER.get();
+  // }
+
+  /**
+   * <p>
+   * Creates an ObjectId using time, machine and inc values. The Java driver used to create all
+   * ObjectIds this way, but it does not match the <a
+   * href="http://docs.mongodb.org/manual/reference/object-id/">ObjectId specification</a>, which
+   * requires four values, not three. This major release of the Java driver conforms to the
+   * specification, but still supports clients that are relying on the behavior of the previous
+   * major release by providing this explicit factory method that takes three parameters instead of
+   * four.
+   * </p>
+   *
+   * <p>
+   * Ordinary users of the driver will not need this method. It's only for those that have written
+   * there own BSON decoders.
+   * </p>
+   *
+   * <p>
+   * NOTE: This will not break any application that use ObjectIds. The 12-byte representation will
+   * be round-trippable from old to new driver releases.
+   * </p>
+   *
+   * @param time
+   *          time in seconds
+   * @param machine
+   *          machine ID
+   * @param inc
+   *          incremental value
+   * @return a new {@code ObjectId} created from the given values
+   * @since 2.12.0
+   */
+  public static ObjectId createFromLegacyFormat(final int time, final int machine, final int inc) {
+    return new ObjectId(time, machine, inc);
+  }
+
+  /**
+   * Create a new object id.
+   */
+  public ObjectId() {
+    this(new Date());
+  }
+
+  /**
+   * Constructs a new instance using the given date.
+   *
+   * @param date
+   *          the date
+   */
+  public ObjectId(final Date date) {
+    this(dateToTimestampSeconds(date), RANDOM.nextInt(), (short) RANDOM
+        .nextInt(Short.MAX_VALUE + 1), RANDOM.nextInt(), false);
+  }
+
+  /**
+   * Constructs a new instances using the given date and counter.
+   *
+   * @param date
+   *          the date
+   * @param counter
+   *          the counter
+   * @throws IllegalArgumentException
+   *           if the high order byte of counter is not zero
+   */
+  public ObjectId(final Date date, final int counter) {
+    this(date, RANDOM.nextInt(), (short) RANDOM.nextInt(Short.MAX_VALUE + 1), counter);
+  }
+
+  /**
+   * Constructs a new instances using the given date, machine identifier, process identifier, and
+   * counter.
+   *
+   * @param date
+   *          the date
+   * @param machineIdentifier
+   *          the machine identifier
+   * @param processIdentifier
+   *          the process identifier
+   * @param counter
+   *          the counter
+   * @throws IllegalArgumentException
+   *           if the high order byte of machineIdentifier or counter is not zero
+   */
+  public ObjectId(final Date date, final int machineIdentifier, final short processIdentifier,
+      final int counter) {
+    this(dateToTimestampSeconds(date), machineIdentifier, processIdentifier, counter);
+  }
+
+  /**
+   * Creates an ObjectId using the given time, machine identifier, process identifier, and counter.
+   *
+   * @param timestamp
+   *          the time in seconds
+   * @param machineIdentifier
+   *          the machine identifier
+   * @param processIdentifier
+   *          the process identifier
+   * @param counter
+   *          the counter
+   * @throws IllegalArgumentException
+   *           if the high order byte of machineIdentifier or counter is not zero
+   */
+  public ObjectId(final int timestamp, final int machineIdentifier, final short processIdentifier,
+      final int counter) {
+    this(timestamp, machineIdentifier, processIdentifier, counter, true);
+  }
+
+  private ObjectId(final int timestamp, final int machineIdentifier, final short processIdentifier,
+      final int counter, final boolean checkCounter) {
+    if ((machineIdentifier & 0xff000000) != 0) {
+      throw new IllegalArgumentException(
+          "The machine identifier must be between 0 and 16777215 (it must fit in three bytes).");
+    }
+    if (checkCounter && ((counter & 0xff000000) != 0)) {
+      throw new IllegalArgumentException(
+          "The counter must be between 0 and 16777215 (it must fit in three bytes).");
+    }
+    this.timestamp = timestamp;
+    this.machineIdentifier = machineIdentifier;
+    this.processIdentifier = processIdentifier;
+    this.counter = counter & LOW_ORDER_THREE_BYTES;
+  }
+
+  /**
+   * Constructs a new instance from a 24-byte hexadecimal string representation.
+   *
+   * @param hexString
+   *          the string to convert
+   * @throws IllegalArgumentException
+   *           if the string is not a valid hex string representation of an ObjectId
+   */
+  public ObjectId(final String hexString) {
+    this(parseHexString(hexString));
+  }
+
+  /**
+   * Constructs a new instance from the given byte array
+   *
+   * @param bytes
+   *          the byte array
+   * @throws IllegalArgumentException
+   *           if array is null or not of length 12
+   */
+  public ObjectId(final byte[] bytes) {
+    if (bytes == null) {
+      throw new IllegalArgumentException();
+    }
+    if (bytes.length != 12) {
+      throw new IllegalArgumentException("need 12 bytes");
+    }
+
+    timestamp = makeInt(bytes[0], bytes[1], bytes[2], bytes[3]);
+    machineIdentifier = makeInt((byte) 0, bytes[4], bytes[5], bytes[6]);
+    processIdentifier = (short) makeInt((byte) 0, (byte) 0, bytes[7], bytes[8]);
+    counter = makeInt((byte) 0, bytes[9], bytes[10], bytes[11]);
+  }
+
+  /**
+   * Creates an ObjectId
+   *
+   * @param timestamp
+   *          time in seconds
+   * @param machineAndProcessIdentifier
+   *          machine and process identifier
+   * @param counter
+   *          incremental value
+   */
+  ObjectId(final int timestamp, final int machineAndProcessIdentifier, final int counter) {
+    this(legacyToBytes(timestamp, machineAndProcessIdentifier, counter));
+  }
+
+  private static byte[] legacyToBytes(final int timestamp, final int machineAndProcessIdentifier,
+      final int counter) {
+    byte[] bytes = new byte[12];
+    bytes[0] = int3(timestamp);
+    bytes[1] = int2(timestamp);
+    bytes[2] = int1(timestamp);
+    bytes[3] = int0(timestamp);
+    bytes[4] = int3(machineAndProcessIdentifier);
+    bytes[5] = int2(machineAndProcessIdentifier);
+    bytes[6] = int1(machineAndProcessIdentifier);
+    bytes[7] = int0(machineAndProcessIdentifier);
+    bytes[8] = int3(counter);
+    bytes[9] = int2(counter);
+    bytes[10] = int1(counter);
+    bytes[11] = int0(counter);
+    return bytes;
+  }
+
+  /**
+   * Convert to a byte array. Note that the numbers are stored in big-endian order.
+   *
+   * @return the byte array
+   */
+  public byte[] toByteArray() {
+    byte[] bytes = new byte[12];
+    bytes[0] = int3(timestamp);
+    bytes[1] = int2(timestamp);
+    bytes[2] = int1(timestamp);
+    bytes[3] = int0(timestamp);
+    bytes[4] = int2(machineIdentifier);
+    bytes[5] = int1(machineIdentifier);
+    bytes[6] = int0(machineIdentifier);
+    bytes[7] = short1(processIdentifier);
+    bytes[8] = short0(processIdentifier);
+    bytes[9] = int2(counter);
+    bytes[10] = int1(counter);
+    bytes[11] = int0(counter);
+    return bytes;
+  }
+
+  /**
+   * Gets the timestamp (number of seconds since the Unix epoch).
+   *
+   * @return the timestamp
+   */
+  public int getTimestamp() {
+    return timestamp;
+  }
+
+  /**
+   * Gets the machine identifier.
+   *
+   * @return the machine identifier
+   */
+  public int getMachineIdentifier() {
+    return machineIdentifier;
+  }
+
+  /**
+   * Gets the process identifier.
+   *
+   * @return the process identifier
+   */
+  public short getProcessIdentifier() {
+    return processIdentifier;
+  }
+
+  /**
+   * Gets the counter.
+   *
+   * @return the counter
+   */
+  public int getCounter() {
+    return counter;
+  }
+
+  /**
+   * Gets the timestamp as a {@code Date} instance.
+   *
+   * @return the Date
+   */
+  public Date getDate() {
+    return new Date(timestamp * 1000L);
+  }
+
+  /**
+   * Converts this instance into a 24-byte hexadecimal string representation.
+   *
+   * @return a string representation of the ObjectId in hexadecimal format
+   */
+  // public String toHexString() {
+  // StringBuilder buf = new StringBuilder(24);
+  //
+  // for (final byte b : toByteArray()) {
+  // buf.append(String.format("%02x", b & 0xff));
+  // }
+  //
+  // return buf.toString();
+  // }
+
+  @Override
+  public boolean equals(final Object o) {
+    if (this == o) {
       return true;
-
-    ObjectId other = massageToObjectId(o);
-    if (other == null)
+    }
+    if (o == null || !(o instanceof ObjectId)) {
       return false;
+    }
 
-    return _time == other._time && _machine == other._machine && _inc == other._inc;
+    ObjectId objectId = (ObjectId) o;
+
+    if (counter != objectId.counter) {
+      return false;
+    }
+    if (machineIdentifier != objectId.machineIdentifier) {
+      return false;
+    }
+    if (processIdentifier != objectId.processIdentifier) {
+      return false;
+    }
+    if (timestamp != objectId.timestamp) {
+      return false;
+    }
+
+    return true;
   }
 
+  @Override
+  public int hashCode() {
+    int result = timestamp;
+    result = 31 * result + machineIdentifier;
+    result = 31 * result + (int) processIdentifier;
+    result = 31 * result + counter;
+    return result;
+  }
+
+  @Override
+  public int compareTo(final ObjectId other) {
+    if (other == null) {
+      throw new NullPointerException();
+    }
+
+    byte[] byteArray = toByteArray();
+    byte[] otherByteArray = other.toByteArray();
+    for (int i = 0; i < 12; i++) {
+      if (byteArray[i] != otherByteArray[i]) {
+        return ((byteArray[i] & 0xff) < (otherByteArray[i] & 0xff)) ? -1 : 1;
+      }
+    }
+    return 0;
+  }
+
+  @Override
   public String toString() {
     byte b[] = toByteArray();
 
@@ -118,111 +453,93 @@ public class ObjectId implements Serializable {
     return buf.toString();
   }
 
+  // Deprecated methods
+
   /**
-   * Turn an object into an <code>ObjectId</code>, if possible. Strings will be converted into
-   * <code>ObjectId</code>s, if possible, and <code>ObjectId</code>s will be cast and returned.
-   * Passing in <code>null</code> returns <code>null</code>.
-   * 
-   * @param o
-   *          the object to convert
-   * @return an <code>ObjectId</code> if it can be massaged, null otherwise
+   * Gets the time of this ID, in seconds.
+   *
+   * @deprecated Use #getTimestamp instead
+   * @return the time component of this ID in seconds
    */
-  public static ObjectId massageToObjectId(Object o) {
-    if (o == null)
-      return null;
-
-    if (o instanceof ObjectId)
-      return (ObjectId) o;
-
-    if (o instanceof String) {
-      String s = o.toString();
-      if (isValid(s))
-        return new ObjectId(s);
-    }
-
-    return null;
+  @Deprecated
+  public int getTimeSecond() {
+    return timestamp;
   }
 
-  public byte[] toByteArray() {
-    byte b[] = new byte[12];
-    putInt(_inc, b, 0);
-    putInt(_machine, b, 4);
-    putInt(_time, b, 8);
-    reverse(b);
+  /**
+   * Gets the time of this instance, in milliseconds.
+   *
+   * @deprecated Use #getDate instead
+   * @return the time component of this ID in milliseconds
+   */
+  @Deprecated
+  public long getTime() {
+    return timestamp * 1000L;
+  }
+
+  static {
+    try {
+      MACHINE_IDENTIFIER = createMachineIdentifier();
+      PROCESS_IDENTIFIER = createProcessIdentifier();
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  private static int createMachineIdentifier() {
+    return RANDOM.nextInt();
+  }
+
+  private static short createProcessIdentifier() {
+    return (short) RANDOM.nextInt(Short.MAX_VALUE + 1);
+  }
+
+  private static byte[] parseHexString(final String s) {
+    if (!isValid(s)) {
+      throw new IllegalArgumentException("invalid hexadecimal representation of an ObjectId: [" + s
+          + "]");
+    }
+
+    byte[] b = new byte[12];
+    for (int i = 0; i < b.length; i++) {
+      b[i] = (byte) Integer.parseInt(s.substring(i * 2, i * 2 + 2), 16);
+    }
     return b;
   }
 
-  static void reverse(byte[] b) {
-    for (int i = 0; i < b.length / 2; i++) {
-      byte t = b[i];
-      b[i] = b[b.length - (i + 1)];
-      b[b.length - (i + 1)] = t;
-    }
+  private static int dateToTimestampSeconds(final Date time) {
+    return (int) (time.getTime() / 1000);
   }
 
-  public static int _flip(int x) {
-    int z = 0;
-    z |= ((x << 24) & 0xFF000000);
-    z |= ((x << 8) & 0x00FF0000);
-    z |= ((x >> 8) & 0x0000FF00);
-    z |= ((x >> 24) & 0x000000FF);
-    return z;
+  // Big-Endian helpers, in this class because all other BSON numbers are little-endian
+
+  private static int makeInt(final byte b3, final byte b2, final byte b1, final byte b0) {
+    // CHECKSTYLE:OFF
+    return (((b3) << 24) | ((b2 & 0xff) << 16) | ((b1 & 0xff) << 8) | ((b0 & 0xff)));
+    // CHECKSTYLE:ON
   }
 
-  public int getMachine() {
-    return _machine;
+  private static byte int3(final int x) {
+    return (byte) (x >> 24);
   }
 
-  public long getTime() {
-    long z = _flip(_time);
-    return z * 1000;
+  private static byte int2(final int x) {
+    return (byte) (x >> 16);
   }
 
-  public int getInc() {
-    return _inc;
+  private static byte int1(final int x) {
+    return (byte) (x >> 8);
   }
 
-  /**
-   * Masking to only use the least significant byte of an integer
-   */
-  private static final int BYTE_MASK = 0x000000FF;
-
-  /**
-   * Read 4 bytes from the given array starting at the given index and turn them into an integer
-   * 
-   * @param bytes
-   *          the byte array to read from
-   * @param startIndex
-   *          the index to start att
-   * @return the integer represented by the four bytes
-   */
-  private static final int readInt(byte[] bytes, int startIndex) {
-    byte b4 = bytes[startIndex];
-    byte b3 = bytes[startIndex + 1];
-    byte b2 = bytes[startIndex + 2];
-    byte b1 = bytes[startIndex + 3];
-
-    return (((b4) << 24) | ((b3 & 0xff) << 16) | ((b2 & 0xff) << 8) | ((b1 & 0xff)));
+  private static byte int0(final int x) {
+    return (byte) (x);
   }
 
-  /**
-   * Write the integer 'val' as a 4 byte value to the given array starting at the given index
-   * 
-   * @param val
-   *          the integer value to write
-   * @param bytes
-   *          the byte array to write to
-   * @param startIndex
-   *          the index in the array to start writing at
-   */
-  public static void putInt(int val, byte[] bytes, int startIndex) {
-    for (int i = 0; i < 4; i++) {
-      bytes[i + startIndex] = (byte) (val & BYTE_MASK);
-      val = val >> 8;
-    }
+  private static byte short1(final short x) {
+    return (byte) (x >> 8);
   }
 
-  int _time;
-  int _machine;
-  int _inc;
+  private static byte short0(final short x) {
+    return (byte) (x);
+  }
 }
