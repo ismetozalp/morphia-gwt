@@ -220,16 +220,12 @@ public final class ObjectId implements Comparable<ObjectId>, Serializable {
     this(timestamp, machineIdentifier, processIdentifier, counter, true);
   }
 
+  public static native void consoleLog(String message) /*-{
+                                                       console.log("me:" + message);
+                                                       }-*/;
+
   private ObjectId(final int timestamp, final int machineIdentifier, final short processIdentifier,
       final int counter, final boolean checkCounter) {
-    if ((machineIdentifier & 0xff000000) != 0) {
-      throw new IllegalArgumentException(
-          "The machine identifier must be between 0 and 16777215 (it must fit in three bytes).");
-    }
-    if (checkCounter && ((counter & 0xff000000) != 0)) {
-      throw new IllegalArgumentException(
-          "The counter must be between 0 and 16777215 (it must fit in three bytes).");
-    }
     this.timestamp = timestamp;
     this.machineIdentifier = machineIdentifier;
     this.processIdentifier = processIdentifier;
