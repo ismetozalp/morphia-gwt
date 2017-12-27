@@ -24,7 +24,6 @@ import java.util.Random;
  * <p>
  * GWT emulation for ObjectId
  * </p>
- * 
  */
 public final class ObjectId implements Comparable<ObjectId>, Serializable {
 
@@ -36,6 +35,10 @@ public final class ObjectId implements Comparable<ObjectId>, Serializable {
   private static final short PROCESS_IDENTIFIER;
 
   private static final Random RANDOM = new Random();
+
+  private static final char[] HEX_CHARS = new char[]{
+    '0', '1', '2', '3', '4', '5', '6', '7',
+    '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
 
   private final int timestamp;
   private final int machineIdentifier;
@@ -54,11 +57,11 @@ public final class ObjectId implements Comparable<ObjectId>, Serializable {
   /**
    * Checks if a string could be an {@code ObjectId}.
    *
-   * @param hexString
-   *          a potential ObjectId as a String.
+   * @param hexString a potential ObjectId as a String.
+   *
    * @return whether the string could be an object id
-   * @throws IllegalArgumentException
-   *           if hexString is null
+   *
+   * @throws IllegalArgumentException if hexString is null
    */
   public static boolean isValid(final String hexString) {
     if (hexString == null) {
@@ -136,13 +139,12 @@ public final class ObjectId implements Comparable<ObjectId>, Serializable {
    * be round-trippable from old to new driver releases.
    * </p>
    *
-   * @param time
-   *          time in seconds
-   * @param machine
-   *          machine ID
-   * @param inc
-   *          incremental value
+   * @param time    time in seconds
+   * @param machine machine ID
+   * @param inc     incremental value
+   *
    * @return a new {@code ObjectId} created from the given values
+   *
    * @since 2.12.0
    */
   public static ObjectId createFromLegacyFormat(final int time, final int machine, final int inc) {
@@ -159,23 +161,19 @@ public final class ObjectId implements Comparable<ObjectId>, Serializable {
   /**
    * Constructs a new instance using the given date.
    *
-   * @param date
-   *          the date
+   * @param date the date
    */
   public ObjectId(final Date date) {
-    this(dateToTimestampSeconds(date), RANDOM.nextInt(), (short) RANDOM
-        .nextInt(Short.MAX_VALUE + 1), RANDOM.nextInt(), false);
+    this(dateToTimestampSeconds(date), RANDOM.nextInt(), (short) RANDOM.nextInt(Short.MAX_VALUE + 1), RANDOM.nextInt(), false);
   }
 
   /**
    * Constructs a new instances using the given date and counter.
    *
-   * @param date
-   *          the date
-   * @param counter
-   *          the counter
-   * @throws IllegalArgumentException
-   *           if the high order byte of counter is not zero
+   * @param date    the date
+   * @param counter the counter
+   *
+   * @throws IllegalArgumentException if the high order byte of counter is not zero
    */
   public ObjectId(final Date date, final int counter) {
     this(date, RANDOM.nextInt(), (short) RANDOM.nextInt(Short.MAX_VALUE + 1), counter);
@@ -185,47 +183,46 @@ public final class ObjectId implements Comparable<ObjectId>, Serializable {
    * Constructs a new instances using the given date, machine identifier, process identifier, and
    * counter.
    *
-   * @param date
-   *          the date
-   * @param machineIdentifier
-   *          the machine identifier
-   * @param processIdentifier
-   *          the process identifier
-   * @param counter
-   *          the counter
-   * @throws IllegalArgumentException
-   *           if the high order byte of machineIdentifier or counter is not zero
+   * @param date              the date
+   * @param machineIdentifier the machine identifier
+   * @param processIdentifier the process identifier
+   * @param counter           the counter
+   *
+   * @throws IllegalArgumentException if the high order byte of machineIdentifier or counter is not zero
    */
   public ObjectId(final Date date, final int machineIdentifier, final short processIdentifier,
-      final int counter) {
+    final int counter) {
     this(dateToTimestampSeconds(date), machineIdentifier, processIdentifier, counter);
   }
 
   /**
    * Creates an ObjectId using the given time, machine identifier, process identifier, and counter.
    *
-   * @param timestamp
-   *          the time in seconds
-   * @param machineIdentifier
-   *          the machine identifier
-   * @param processIdentifier
-   *          the process identifier
-   * @param counter
-   *          the counter
-   * @throws IllegalArgumentException
-   *           if the high order byte of machineIdentifier or counter is not zero
+   * @param timestamp         the time in seconds
+   * @param machineIdentifier the machine identifier
+   * @param processIdentifier the process identifier
+   * @param counter           the counter
+   *
+   * @throws IllegalArgumentException if the high order byte of machineIdentifier or counter is not zero
    */
   public ObjectId(final int timestamp, final int machineIdentifier, final short processIdentifier,
-      final int counter) {
+    final int counter) {
     this(timestamp, machineIdentifier, processIdentifier, counter, true);
   }
 
   public static native void consoleLog(String message) /*-{
-                                                       console.log("me:" + message);
-                                                       }-*/;
+    console.log("me:" + message);
+  }-*/;
 
-  private ObjectId(final int timestamp, final int machineIdentifier, final short processIdentifier,
-      final int counter, final boolean checkCounter) {
+  private ObjectId(final int timestamp, final int machineIdentifier, final short processIdentifier, final int counter, final boolean checkCounter) {
+    if ((machineIdentifier & 0xff000000) != 0) {
+      throw new IllegalArgumentException("The machine identifier must be between 0 and 16777215 (it must fit in three bytes).");
+    }
+
+    if (checkCounter && ((counter & 0xff000000) != 0)) {
+      throw new IllegalArgumentException("The counter must be between 0 and 16777215 (it must fit in three bytes).");
+    }
+
     this.timestamp = timestamp;
     this.machineIdentifier = machineIdentifier;
     this.processIdentifier = processIdentifier;
@@ -235,10 +232,9 @@ public final class ObjectId implements Comparable<ObjectId>, Serializable {
   /**
    * Constructs a new instance from a 24-byte hexadecimal string representation.
    *
-   * @param hexString
-   *          the string to convert
-   * @throws IllegalArgumentException
-   *           if the string is not a valid hex string representation of an ObjectId
+   * @param hexString the string to convert
+   *
+   * @throws IllegalArgumentException if the string is not a valid hex string representation of an ObjectId
    */
   public ObjectId(final String hexString) {
     this(parseHexString(hexString));
@@ -247,10 +243,9 @@ public final class ObjectId implements Comparable<ObjectId>, Serializable {
   /**
    * Constructs a new instance from the given byte array
    *
-   * @param bytes
-   *          the byte array
-   * @throws IllegalArgumentException
-   *           if array is null or not of length 12
+   * @param bytes the byte array
+   *
+   * @throws IllegalArgumentException if array is null or not of length 12
    */
   public ObjectId(final byte[] bytes) {
     if (bytes == null) {
@@ -269,19 +264,16 @@ public final class ObjectId implements Comparable<ObjectId>, Serializable {
   /**
    * Creates an ObjectId
    *
-   * @param timestamp
-   *          time in seconds
-   * @param machineAndProcessIdentifier
-   *          machine and process identifier
-   * @param counter
-   *          incremental value
+   * @param timestamp                   time in seconds
+   * @param machineAndProcessIdentifier machine and process identifier
+   * @param counter                     incremental value
    */
   ObjectId(final int timestamp, final int machineAndProcessIdentifier, final int counter) {
     this(legacyToBytes(timestamp, machineAndProcessIdentifier, counter));
   }
 
   private static byte[] legacyToBytes(final int timestamp, final int machineAndProcessIdentifier,
-      final int counter) {
+    final int counter) {
     byte[] bytes = new byte[12];
     bytes[0] = int3(timestamp);
     bytes[1] = int2(timestamp);
@@ -370,15 +362,16 @@ public final class ObjectId implements Comparable<ObjectId>, Serializable {
    *
    * @return a string representation of the ObjectId in hexadecimal format
    */
-  // public String toHexString() {
-  // StringBuilder buf = new StringBuilder(24);
-  //
-  // for (final byte b : toByteArray()) {
-  // buf.append(String.format("%02x", b & 0xff));
-  // }
-  //
-  // return buf.toString();
-  // }
+  public String toHexString() {
+    char[] chars = new char[24];
+    int i = 0;
+    for (byte b : toByteArray()) {
+      chars[i++] = HEX_CHARS[b >> 4 & 0xF];
+      chars[i++] = HEX_CHARS[b & 0xF];
+    }
+
+    return new String(chars);
+  }
 
   @Override
   public boolean equals(final Object o) {
@@ -434,19 +427,21 @@ public final class ObjectId implements Comparable<ObjectId>, Serializable {
 
   @Override
   public String toString() {
-    byte b[] = toByteArray();
-
-    StringBuilder buf = new StringBuilder(24);
-
-    for (int i = 0; i < b.length; i++) {
-      int x = b[i] & 0xFF;
-      String s = Integer.toHexString(x);
-      if (s.length() == 1)
-        buf.append("0");
-      buf.append(s);
-    }
-
-    return buf.toString();
+    return toHexString();
+//    byte b[] = toByteArray();
+//
+//    StringBuilder buf = new StringBuilder(24);
+//
+//    for (int i = 0; i < b.length; i++) {
+//      int x = b[i] & 0xFF;
+//      String s = Integer.toHexString(x);
+//      if (s.length() == 1) {
+//        buf.append("0");
+//      }
+//      buf.append(s);
+//    }
+//
+//    return buf.toString();
   }
 
   // Deprecated methods
@@ -454,8 +449,9 @@ public final class ObjectId implements Comparable<ObjectId>, Serializable {
   /**
    * Gets the time of this ID, in seconds.
    *
-   * @deprecated Use #getTimestamp instead
    * @return the time component of this ID in seconds
+   *
+   * @deprecated Use #getTimestamp instead
    */
   @Deprecated
   public int getTimeSecond() {
@@ -465,8 +461,9 @@ public final class ObjectId implements Comparable<ObjectId>, Serializable {
   /**
    * Gets the time of this instance, in milliseconds.
    *
-   * @deprecated Use #getDate instead
    * @return the time component of this ID in milliseconds
+   *
+   * @deprecated Use #getDate instead
    */
   @Deprecated
   public long getTime() {
@@ -492,14 +489,14 @@ public final class ObjectId implements Comparable<ObjectId>, Serializable {
 
   private static byte[] parseHexString(final String s) {
     if (!isValid(s)) {
-      throw new IllegalArgumentException("invalid hexadecimal representation of an ObjectId: [" + s
-          + "]");
+      throw new IllegalArgumentException("invalid hexadecimal representation of an ObjectId: [" + s + "]");
     }
 
     byte[] b = new byte[12];
     for (int i = 0; i < b.length; i++) {
       b[i] = (byte) Integer.parseInt(s.substring(i * 2, i * 2 + 2), 16);
     }
+
     return b;
   }
 
