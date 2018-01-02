@@ -2,7 +2,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>org.mongodb.morphia</groupId>
 	<artifactId>morphia-gwt</artifactId>
-	<version>1.1.4</version>
+	<version>1.1.5</version>
 	<packaging>jar</packaging>
 	<name>morphia-gwt</name>
 	<description>Morphia GWT Extension</description>
@@ -36,19 +36,12 @@
 	</developers>
 
 	<properties>
-		<morphia.version>[0.111,)</morphia.version>
 		<mongo-java-driver.version>[3.0.1,]</mongo-java-driver.version>
 		<gwt.version>[2.5.0,)</gwt.version>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 	</properties>
 
 	<dependencies>
-		<dependency>
-			<groupId>org.mongodb.morphia</groupId>
-			<artifactId>morphia</artifactId>
-			<version>${morphia.version}</version>
-		</dependency>
-
 		<dependency>
 			<groupId>org.mongodb</groupId>
 			<artifactId>mongo-java-driver</artifactId>
