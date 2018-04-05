@@ -8,7 +8,7 @@ add the dependency to your pom.xml
 <dependency>
   <groupId>org.mongodb.morphia</groupId>
   <artifactId>morphia-gwt</artifactId>
-  <version>0.107.2</version>
+  <version>1.1.7</version>
 </dependency>
 ```
 
